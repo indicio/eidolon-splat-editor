@@ -191,3 +191,7 @@ gsplat shader hooks, SH rotation, video config) were studied and ported from
 Google Fonts [Syncopate](https://fonts.google.com/specimen/Syncopate) and
 [Red Hat Text](https://fonts.google.com/specimen/Red+Hat+Text) (OFL) are
 loaded from the Google Fonts CDN.
+
+## License
+
+[MIT](LICENSE) © 2026 Craig Johnston
