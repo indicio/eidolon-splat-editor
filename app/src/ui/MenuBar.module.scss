@@ -1,0 +1,125 @@
+.bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 64px;
+    padding: 0 var(--sp-4);
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+}
+
+.logo {
+    margin-right: var(--sp-4);
+    font-family: 'Syncopate', var(--font-ui), sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--accent-fg);
+    white-space: nowrap;
+}
+
+/* centered workspace switcher: connected pill segments */
+.modeTabs {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    padding: 4px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    z-index: 1;
+}
+
+.modeTab {
+    padding: 8px 30px;
+    font-size: var(--fs-lg);
+    font-weight: 500;
+    color: var(--text-dim);
+    border-radius: 999px;
+
+    &:hover:not(.modeActive) {
+        color: var(--text);
+        background: var(--bg-hover);
+    }
+
+    &.modeActive {
+        background: var(--accent);
+        color: var(--accent-text);
+        font-weight: 600;
+    }
+}
+
+.menu {
+    position: relative;
+    display: flex;
+    align-self: stretch;
+    align-items: center;
+
+    > button {
+        padding: 6px var(--sp-3);
+        border-radius: var(--radius);
+        color: var(--text-dim);
+        font-size: var(--fs-md);
+
+        &:hover,
+        &.open {
+            background: var(--bg-hover);
+            color: var(--text);
+        }
+    }
+}
+
+.dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 220;
+    min-width: 256px;
+    padding: var(--sp-1);
+    background: var(--bg-panel-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    box-shadow: 0 9px 30px rgba(0, 0, 0, 0.4);
+
+    > button {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--sp-4);
+        width: 100%;
+        padding: 5px var(--sp-2);
+        border-radius: var(--radius);
+        text-align: left;
+        font-size: var(--fs-md);
+
+        &:hover:not(:disabled) {
+            background: var(--bg-hover);
+        }
+
+        &:disabled {
+            color: var(--text-faint);
+            cursor: default;
+        }
+
+        kbd {
+            font-family: var(--font-ui);
+            font-size: var(--fs-xs);
+            color: var(--text-faint);
+        }
+    }
+}
+
+.separator {
+    height: 1px;
+    margin: var(--sp-1) 0;
+    background: var(--border);
+}
+
+.clickAway {
+    position: fixed;
+    inset: 0;
+    z-index: 210;
+}

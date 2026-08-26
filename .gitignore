@@ -1,0 +1,16 @@
+# dependencies / build output
+node_modules/
+dist/
+
+# macOS
+.DS_Store
+
+# external clones kept for reference/tooling — not our source
+reference/
+tools/OpenSplat/
+
+# session diagnostics
+recon-job-*
+
+# local-only Claude settings (skills are shared, settings.local is per-machine)
+.claude/settings.local.json

@@ -1,0 +1,14 @@
+{
+  "name": "splat-studio-reconstruction-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "bin": { "splat-recon": "./server.mjs" },
+  "scripts": {
+    "start": "node server.mjs",
+    "start:fake": "SPLAT_RECON_FAKE=1 node server.mjs"
+  },
+  "dependencies": {
+    "busboy": "^1.6.0"
+  }
+}
