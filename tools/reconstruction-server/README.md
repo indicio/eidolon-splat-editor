@@ -1,4 +1,4 @@
-# Splat Studio reconstruction bridge
+# EiDOlON reconstruction bridge
 
 A small local server that gives the Training workspace a **real** Gaussian
 splat training backend. It implements the app's `ReconstructionProvider` REST
@@ -23,7 +23,7 @@ npm install
 npm start                                # http://localhost:8787
 ```
 
-Then in Splat Studio: **Training tab → Connect service… → http://localhost:8787**.
+Then in EiDOlON: **Training tab → Connect service… → http://localhost:8787**.
 The banner's *Test* button shows which engines the bridge can see.
 
 ## Contract

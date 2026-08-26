@@ -1,18 +1,32 @@
-# Splat Studio
+# EiDOlON
 
 A designer-oriented, browser-based Gaussian splat editor: import / clean up /
 organize splats, animate cameras and effects on a timeline, render MP4s, and
 reconstruct new splats from photos or video via a local COLMAP + OpenSplat
 bridge.
 
+## Features
+
+- **Edit** — load `.ply` / `.compressed.ply` / `.sog` / `.splat` / `.ksplat` /
+  `.spz`; brush / lasso / box selection; non-destructive delete, crop and
+  layers; a modifier stack (floater removal, opacity/size thresholds, crop
+  box, color grade) with undoable bake; model gizmos; full undo/redo.
+- **Training** — reconstruct a new splat from 20+ overlapping photos or a
+  video, driven by a local COLMAP + OpenSplat bridge (real training), with a
+  clearly-labeled simulation mode when no engine is connected.
+- **Animation** — keyframed camera and model tracks with spline easing, a
+  scrubbing timeline, explode/lighting effects, saved cameras, look-through
+  lens, and offline MP4 rendering (H.264 via WebCodecs).
+- **Export** — PLY, compressed PLY and SOG round-trips (with correct
+  spherical-harmonic rotation), plus `.splatstudio` project save/load.
+- Renders on WebGL2 by default with experimental WebGPU (`?gpu=webgpu`);
+  2M-splat scenes stay interactive.
+
+## Documentation
+
 - Usage, controls and features: [`app/README.md`](app/README.md)
 - Architecture, reuse analysis and roadmap: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 - Reconstruction bridge details: [`tools/reconstruction-server/README.md`](tools/reconstruction-server/README.md)
-
-Built on [PlayCanvas](https://playcanvas.com) rendering with core techniques
-adapted from [SuperSplat](https://github.com/playcanvas/supersplat) (MIT) and
-file formats via
-[`@playcanvas/splat-transform`](https://www.npmjs.com/package/@playcanvas/splat-transform).
 
 ---
 
@@ -92,7 +106,7 @@ npm install
 npm start            # http://localhost:8787
 ```
 
-Then in Splat Studio: **Training tab → Connect service… →
+Then in EiDOlON: **Training tab → Connect service… →
 `http://localhost:8787`**. The *Test* button reports which engines the bridge
 can see. CPU training of a ~25-photo set takes on the order of 10–30 minutes.
 
@@ -147,3 +161,33 @@ ARCHITECTURE.md               architecture, reuse analysis, phase history
   project sub-pixel and get alpha-clipped; the dialog enforces a 240px floor.
 - **Port already in use** — the dev server picks the next port automatically;
   the bridge honors `PORT=xxxx npm start`.
+
+## Dependencies & licenses
+
+The editor is TypeScript/React with a deliberately small dependency surface:
+
+| Dependency | Role | License |
+|---|---|---|
+| [playcanvas](https://github.com/playcanvas/engine) | WebGL2/WebGPU engine, gsplat rendering & sorting | MIT |
+| [@playcanvas/splat-transform](https://www.npmjs.com/package/@playcanvas/splat-transform) | Splat file format read/write (PLY, SOG, …) | MIT |
+| [mediabunny](https://github.com/Vanilagy/mediabunny) | MP4 muxing for offline video render | MPL-2.0 |
+| [react](https://react.dev) / react-dom | UI | MIT |
+| [busboy](https://github.com/mscdex/busboy) | Multipart upload parsing (bridge only) | MIT |
+| Vite, TypeScript, sass-embedded, oxlint | Build/dev tooling only | MIT / Apache-2.0 |
+
+External tools (invoked as separate processes by the optional reconstruction
+bridge; **not** linked or redistributed):
+
+- [COLMAP](https://colmap.github.io/) (BSD-3-Clause) — camera pose estimation
+- [OpenSplat](https://github.com/pierotofy/OpenSplat) (AGPL-3.0) — Gaussian
+  splat training. You build it yourself (step 2b); its license applies to that
+  binary, not to this repository's code.
+
+## Acknowledgements
+
+Core editing techniques (splat state/deletion model, transform palette,
+gsplat shader hooks, SH rotation, video config) were studied and ported from
+[SuperSplat](https://github.com/playcanvas/supersplat) (MIT, © PlayCanvas Ltd).
+Google Fonts [Syncopate](https://fonts.google.com/specimen/Syncopate) and
+[Red Hat Text](https://fonts.google.com/specimen/Red+Hat+Text) (OFL) are
+loaded from the Google Fonts CDN.

@@ -1,4 +1,4 @@
-# Splat Studio
+# EiDOlON
 
 Designer-oriented Gaussian splat editor. React + TypeScript + Vite + PlayCanvas,
 with core editing techniques adapted from [SuperSplat](https://github.com/playcanvas/supersplat) (MIT).

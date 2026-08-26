@@ -1,9 +1,9 @@
-# Splat Studio — Architecture
+# EiDOlON — Architecture
 
 A designer-oriented Gaussian splat editor built on PlayCanvas rendering technology,
 reusing the open-source SuperSplat editor's core where practical.
 
-- `app/` — the Splat Studio application (Vite + React + TypeScript + SCSS modules)
+- `app/` — the EiDOlON application (Vite + React + TypeScript + SCSS modules)
 - `reference/supersplat/` — upstream SuperSplat clone (MIT), used as reference and code source
 
 ## 1. SuperSplat reuse analysis
