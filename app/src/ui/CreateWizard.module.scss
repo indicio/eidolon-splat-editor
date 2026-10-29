@@ -299,19 +299,44 @@
     align-items: center;
     justify-content: center;
     gap: var(--sp-4);
+    min-height: 0;
 
     h2 {
         font-size: var(--fs-lg);
         color: var(--text-dim);
         font-weight: 500;
     }
+}
 
-    > button {
-        padding: 4px var(--sp-4);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: var(--bg-panel-raised);
-    }
+.withPreview {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: stretch;
+    padding: var(--sp-4);
+}
+
+.livePreview {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-viewport);
+}
+
+.reconstructBody {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-4);
+    min-width: 360px;
+}
+
+.previewNote {
+    max-width: 360px;
+    color: var(--text-faint);
+    font-size: var(--fs-sm);
+    text-align: center;
 }
 
 .stages {

@@ -3,8 +3,8 @@
  *
  * The editor never talks to a specific reconstruction engine — it submits
  * images to a provider and polls staged progress. Swappable backends:
- * - RemoteProvider: generic REST contract for a GPU service (Brush,
- *   OpenSplat, Nerfstudio behind an API — configure the base URL).
+ * - RemoteProvider: generic REST contract for a local or remote trainer
+ *   (the Spirula bridge, or anything else speaking the same jobs API).
  * - DemoProvider: fully local simulation that stages realistic progress
  *   and synthesizes a splat from the input photos, so the entire capture →
  *   review → reconstruct → edit flow works without a backend.
@@ -22,12 +22,12 @@ export interface JobStage {
 /** Pipeline monitoring payload (bridge `diag` field) — all best-effort. */
 export interface JobDiagnostics {
     totalImages?: number;
-    /** COLMAP pose registration */
+    /** SfM pose registration */
     registeredImages?: number;
     points?: number;
     fragments?: number;
     reprojError?: number;
-    /** OpenSplat training */
+    /** Gaussian training */
     step?: number;
     totalSteps?: number;
     loss?: [number, number][];
@@ -46,6 +46,11 @@ export interface JobProgress {
     /** non-fatal pipeline warning (e.g. poor pose registration) */
     warning?: string;
     diag?: JobDiagnostics;
+    /**
+     * Live trainer preview (Spirula's web viewer) while the job is training.
+     * Absent once the run has finished and the PLY is ready for the editor.
+     */
+    viewerUrl?: string;
     elapsedMs: number;
 }
 

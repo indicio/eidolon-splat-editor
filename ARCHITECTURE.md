@@ -109,7 +109,8 @@ which is what "Bake Modifiers" will collapse at export.
    `worker.mjs` is wired via `WorkerQueue.workerUrl`; a 112 MB / 2M-splat PLY
    parses + morton-sorts in ~1.1 s.
 5. **Reconstruction is out of scope for the editor core** — must stay behind
-   `ReconstructionProvider` so Brush/OpenSplat/Nerfstudio/remote GPU are swappable.
+   `ReconstructionProvider` so the local Spirula bridge and any remote GPU
+   service speaking the same jobs API are swappable.
 
 ## 5. Phase status
 
@@ -191,9 +192,11 @@ which is what "Bake Modifiers" will collapse at export.
   spatial hash → worker/GPU (5.5 s at 2M), GPU intersect selection, sequence
   swap without entity recreation (replaceData port), timeline key edits in undo
   history, stats refresh during timeline scrubs. Reconstruction backend: a
-  local COLMAP + OpenSplat bridge now exists (`tools/reconstruction-server`,
-  REST contract verified end-to-end in fake mode); real-engine runs still need
-  colmap + opensplat installed.
+  local Spirula Studio bridge now exists (`tools/reconstruction-server`,
+  REST contract verified end-to-end in fake mode). It runs `spirula sfm auto`
+  then `spirula train`, embeds Spirula's web viewer while training, and
+  returns the finished PLY to the editor. Real runs need the Spirula binary
+  installed (GPL-3.0, separate process).
 - Phase 4: photo/video ingestion, ReconstructionProvider + job UI.
 - Phase 5: PLY sequences, camera animation, WebGPU/unified migration, agent API surface.
 

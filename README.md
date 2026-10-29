@@ -2,7 +2,7 @@
 
 A designer-oriented, browser-based Gaussian splat editor: import / clean up /
 organize splats, animate cameras and effects on a timeline, render MP4s, and
-reconstruct new splats from photos or video via a local COLMAP + OpenSplat
+reconstruct new splats from photos or video via a local Spirula Studio
 bridge.
 
 ## Features
@@ -12,8 +12,9 @@ bridge.
   layers; a modifier stack (floater removal, opacity/size thresholds, crop
   box, color grade) with undoable bake; model gizmos; full undo/redo.
 - **Training** — reconstruct a new splat from 20+ overlapping photos or a
-  video, driven by a local COLMAP + OpenSplat bridge (real training), with a
-  clearly-labeled simulation mode when no engine is connected.
+  video, driven by a local Spirula Studio bridge (real training, with its
+  web viewer as the live preview), and a clearly-labeled simulation mode
+  when no engine is connected.
 - **Animation** — keyframed camera and model tracks with spline easing, a
   scrubbing timeline, explode/lighting effects, saved cameras, look-through
   lens, and offline MP4 rendering (H.264 via WebCodecs).
@@ -37,8 +38,7 @@ bridge.
 | OS | macOS on Apple Silicon is what's tested; the editor itself is plain web tech and should run anywhere Node + a modern browser do |
 | Node.js | 18+ (developed on 26) with npm |
 | Browser | Chromium (Chrome/Edge) recommended. Video export needs WebCodecs `VideoEncoder` (Chrome, Edge, Safari 16.4+). WebGL2 required; WebGPU optional |
-| Homebrew | Only for the optional reconstruction toolchain |
-| Xcode | Only for optional GPU (Metal) training |
+| Spirula Studio | Optional. The Training tab's real engine; a separate GPL-3.0 app |
 
 ## 1. The editor (required)
 
@@ -73,32 +73,19 @@ Lets the **Training** tab train real Gaussian splats from photos/video.
 Without it, Training runs a clearly-labeled demo simulation that does **not**
 produce a real model.
 
-### 2a. Engines
+Spirula Studio does both pose estimation and gaussian training in one binary,
+and serves a web viewer the Training tab embeds while a job is running. The
+finished PLY opens in this editor. Spirula is GPL-3.0 and is invoked as a
+separate process; it is not part of this repository.
 
-```bash
-# camera pose estimation
-brew install colmap
+### 2a. Install Spirula Studio
 
-# OpenSplat build dependencies
-# IMPORTANT: opencv@4, not opencv — OpenCV 5 renamed the calib3d module
-# OpenSplat links against, and the build will fail at link time with it.
-brew install cmake pytorch opencv@4
-```
+Download the macOS build from
+[Spirula Studio releases](https://github.com/harry7557558/spirula-studio/releases)
+and open the app once (the bridge looks in `/Applications/Spirula Studio.app`
+and on `PATH`). Or set `SPIRULA_BIN` to the `spirula` executable.
 
-### 2b. Build OpenSplat (CPU)
-
-```bash
-git clone --depth 1 https://github.com/pierotofy/OpenSplat.git tools/OpenSplat
-cd tools/OpenSplat && mkdir build && cd build
-cmake -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/pytorch \
-      -DOpenCV_DIR=/opt/homebrew/opt/opencv@4/lib/cmake/opencv4 ..
-make -j$(sysctl -n hw.logicalcpu)
-./opensplat --help   # sanity check
-```
-
-The bridge auto-detects the binary at `tools/OpenSplat/build/opensplat`.
-
-### 2c. Run the bridge
+### 2b. Run the bridge
 
 ```bash
 cd tools/reconstruction-server
@@ -107,36 +94,20 @@ npm start            # http://localhost:8787
 ```
 
 Then in EiDOlON: **Training tab → Connect service… →
-`http://localhost:8787`**. The *Test* button reports which engines the bridge
-can see. CPU training of a ~25-photo set takes on the order of 10–30 minutes.
+`http://localhost:8787`**. The *Test* button reports whether `spirula` was
+found. A job runs `spirula sfm auto` and then `spirula train` (default
+preset `3dgs`, 7000 steps — override with `SPIRULA_PRESET` and
+`SPIRULA_STEPS`). During training the Reconstruct step shows Spirula's
+viewer; when the run finishes that viewer stops and the splat opens here.
 
-To verify the wiring without the engines: `npm run start:fake` (returns a
+To verify the wiring without Spirula: `npm run start:fake` (returns a
 synthesized placeholder, clearly not a trained model).
-
-### 2d. GPU (Metal) training — optional, much faster
-
-Requires full Xcode and a one-time license acceptance (needs your password):
-
-```bash
-sudo xcodebuild -license accept
-cd tools/OpenSplat && rm -rf build && mkdir build && cd build
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-  cmake -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/pytorch \
-        -DOpenCV_DIR=/opt/homebrew/opt/opencv@4/lib/cmake/opencv4 \
-        -DGPU_RUNTIME=MPS ..
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make -j$(sysctl -n hw.logicalcpu)
-
-# run the bridge with GPU training (drops the default --cpu flag):
-cd ../../reconstruction-server
-OPENSPLAT_ARGS="" npm start
-```
 
 ## Project layout
 
 ```
 app/                          the editor (Vite + React + TypeScript + PlayCanvas)
-tools/reconstruction-server/  local COLMAP + OpenSplat REST bridge
-tools/OpenSplat/              OpenSplat clone + build (created in step 2b)
+tools/reconstruction-server/  local Spirula Studio REST bridge
 reference/supersplat/         upstream SuperSplat clone (MIT), reference only
 docs/                         design docs
 ARCHITECTURE.md               architecture, reuse analysis, phase history
@@ -144,17 +115,18 @@ ARCHITECTURE.md               architecture, reuse analysis, phase history
 
 ## Troubleshooting
 
-- **`ld: library 'opencv_calib3d' not found`** while building OpenSplat —
-  you built against OpenCV 5. Install `opencv@4` and pass
-  `-DOpenCV_DIR=/opt/homebrew/opt/opencv@4/lib/cmake/opencv4` (step 2b).
-- **`GPU support not built, use --cpu`** during training — CPU-only OpenSplat
-  builds default to trying Metal. The bridge already passes `--cpu` by
-  default; if you overrode `OPENSPLAT_ARGS`, unset it (or rebuild with MPS,
-  step 2d).
-- **`libc10.dylib can't be opened` (Gatekeeper)** on first OpenSplat run —
-  macOS quarantine on the torch dylibs; approve in System Settings ▸ Privacy &
-  Security (possibly several times), or clear quarantine on the Homebrew
-  pytorch libs.
+- **Training says Spirula was not found** — install the macOS release (step
+  2a) or set `SPIRULA_BIN` to the executable inside the app bundle
+  (`Spirula Studio.app/Contents/MacOS/spirula`).
+- **`VK_ERROR_INCOMPATIBLE_DRIVER` / “Metal is not available”** — the bridge
+  process cannot see the GPU. Start it in a normal terminal, not a sandbox
+  that hides Metal.
+- **Training exits with `ColmapParser: … does not exist`** — the trainer
+  expects photos under the COLMAP workspace’s `images/` folder. Current
+  builds of the bridge link the uploads there before `spirula train`.
+- **The finished splat is a thin horizontal smear in Edit** — Spirula’s
+  metric frame is Z-up and the editor grid is Y-up. Reopen the result; the
+  editor stands ground reconstructions up on the grid and looks down at them.
 - **Render video… does nothing / errors about VideoEncoder** — the browser
   lacks WebCodecs. Use Chrome, Edge, or Safari 16.4+.
 - **Very small custom render sizes look empty** — below ~240px gaussians
@@ -178,10 +150,9 @@ The editor is TypeScript/React with a deliberately small dependency surface:
 External tools (invoked as separate processes by the optional reconstruction
 bridge; **not** linked or redistributed):
 
-- [COLMAP](https://colmap.github.io/) (BSD-3-Clause) — camera pose estimation
-- [OpenSplat](https://github.com/pierotofy/OpenSplat) (AGPL-3.0) — Gaussian
-  splat training. You build it yourself (step 2b); its license applies to that
-  binary, not to this repository's code.
+- [Spirula Studio](https://github.com/harry7557558/spirula-studio) (GPL-3.0) —
+  pose estimation and Gaussian splat training. Install it yourself (step 2a);
+  its license applies to that binary, not to this repository's code.
 
 ## Acknowledgements
 

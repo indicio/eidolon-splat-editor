@@ -2,20 +2,28 @@
 
 A small local server that gives the Training workspace a **real** Gaussian
 splat training backend. It implements the app's `ReconstructionProvider` REST
-contract and drives **COLMAP** (camera poses) + **OpenSplat** (gaussian
-training) on your machine.
+contract and drives **Spirula Studio** (`spirula sfm auto`, then
+`spirula train`) on your machine.
+
+Spirula is GPL-3.0. The bridge shells out to it; this repository does not
+vendor or link that code.
 
 Without a connected service, the app's Training tab uses a *demo simulation*
 that arranges photos as flat panels — it never trains a model. This bridge is
 how you get actual reconstructions.
 
+While training, the job reports `viewerUrl` (Spirula's web viewer on
+127.0.0.1). The Training tab embeds that as a live preview. The process is
+started with `--keep-viewer-alive 0`, so the viewer stops when the run
+finishes and the finished `splat.ply` is what the editor opens.
+
 ## Setup
 
 ```bash
-# 1. engines
-brew install colmap                      # camera pose estimation
-# OpenSplat: build from https://github.com/pierotofy/OpenSplat
-#            then put `opensplat` on PATH or set OPENSPLAT_BIN
+# 1. Spirula Studio (macOS arm64 build)
+#    https://github.com/harry7557558/spirula-studio/releases
+#    The bridge finds /Applications/Spirula Studio.app or `spirula` on PATH.
+#    Override with SPIRULA_BIN.
 
 # 2. bridge
 cd tools/reconstruction-server
@@ -24,58 +32,70 @@ npm start                                # http://localhost:8787
 ```
 
 Then in EiDOlON: **Training tab → Connect service… → http://localhost:8787**.
-The banner's *Test* button shows which engines the bridge can see.
+The banner's *Test* button shows whether `spirula` was found.
 
 ## Contract
 
 | Route | Behavior |
 |---|---|
-| `GET /health` | `{ ok, engine: { colmap, opensplat }, fake }` |
+| `GET /health` | `{ ok, engine: { spirula }, fake }` |
 | `POST /jobs` | multipart `images[]` → `{ id }`, pipeline starts |
-| `GET /jobs/:id` | `{ stageIndex (0–7), stageProgress (0–1), done, diag, warning?, error? }` |
+| `GET /jobs/:id` | `{ stageIndex (0–7), stageProgress (0–1), done, viewerUrl?, diag, warning?, error? }` |
 | `GET /jobs/:id/log` | full timestamped pipeline log (text/plain) |
 | `DELETE /jobs/:id` | cancel + cleanup |
 | `GET /jobs/:id/result` | binary gaussian-splat PLY |
 
-`diag` carries the monitoring payload: `totalImages`, `registeredImages`,
-`points`, `fragments`, `reprojError` (COLMAP), `step` / `totalSteps` /
-`loss: [step, value][]` (OpenSplat), `stageTimes: { stage, ms }[]` and
-`resultSplats` / `resultBytes`.
+`viewerUrl` is present only while `spirula train` is serving its viewer.
+`diag` carries `totalImages`, `registeredImages`, `points`, `fragments`,
+`reprojError` (from SfM `status.bin`), `step` / `totalSteps` /
+`loss: [step, rgb_loss][]`, `stageTimes`, and `resultSplats` / `resultBytes`.
 
 Stage indexes map to the app's progress list: analyze, features, matching,
-poses, point cloud, training, optimizing, packaging.
+poses, point cloud, training, optimizing, packaging. SfM stages Extract,
+Match, Map/Merge/Orient, and Finish land on features, matching, poses, and
+point cloud.
 
 ## Env
 
-- `PORT` (8787), `COLMAP_BIN`, `OPENSPLAT_BIN` (auto-detects
-  `../OpenSplat/build/opensplat`)
-- `OPENSPLAT_STEPS` — training iterations (default 2000; more = better/slower;
-  densification only starts after step 500, so don't go below ~1000)
-- `OPENSPLAT_ARGS` — extra opensplat flags (default none, i.e. GPU training;
-  set to `"--cpu"` if your opensplat build was made without `-DGPU_RUNTIME=MPS`)
-- `SPLAT_RECON_FAKE=1` — skip the engines and return a synthesized placeholder
+- `PORT` (8787)
+- `SPIRULA_BIN` — executable. Default search: that env var, then
+  `Spirula Studio.app/Contents/MacOS/spirula`, then `PATH`
+- `SPIRULA_STEPS` — training iterations (default 7000). Spirula's own `3dgs`
+  preset is 30,000; the bridge passes an explicit count
+- `SPIRULA_PRESET` — `spirula train` preset (default `3dgs`)
+- `SPIRULA_ARGS` — extra arguments appended to `spirula train`
+- `SPLAT_RECON_FAKE=1` — skip Spirula and return a synthesized placeholder
   (only for verifying the wiring; clearly not a trained model)
 
-## Metal (GPU) training
+The train invocation also passes `--eval-mode all` (train on every photo,
+skip the held-out eval) and `--steps-per-save` equal to the step count, so
+one `splat.ply` is written at the end.
 
-The bridge assumes a Metal-capable opensplat build (the default here). To
-build one:
+## Notes
+
+- **Images.** `sfm auto` is given the upload folder and writes the COLMAP
+  model under `workspace/`. The trainer then looks for photos in
+  `workspace/images/`. The bridge symlinks the upload folder there before
+  `spirula train`. Without that link, training exits immediately with
+  `ColmapParser: … does not exist`.
+- **Up axis.** A metric Spirula frame is east-north-up, so height is Z. The
+  editor’s grid is Y-up. Opening the result (`reconstruction.ply`, or any
+  ground site that is wide in X/Y and thin in Z) rotates it −90° about X and
+  frames the camera from above. Left unrotated, the site stands on edge and
+  reads as a horizontal smear through the grid.
+- **GPU.** Spirula uses MoltenVK. The bridge process has to be able to see
+  Metal; a sandbox that hides the GPU makes Spirula exit with
+  `VK_ERROR_INCOMPATIBLE_DRIVER`. Bundle adjustment may still fall back to
+  the CPU when the device has no double-precision arithmetic (seen on M3
+  Pro); mapping still finishes. `MVK_CONFIG_LOG_LEVEL` defaults to `1` so
+  the job log is not MoltenVK’s extension list.
+
+## Tests
 
 ```bash
-sudo xcodebuild -license accept            # one-time Xcode license
-cd tools/OpenSplat && rm -rf build && mkdir build && cd build
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-  cmake -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/pytorch \
-        -DOpenCV_DIR=/opt/homebrew/opt/opencv@4/lib/cmake/opencv4 \
-        -DGPU_RUNTIME=MPS ..
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make -j12
+node --test test/*.test.mjs
 ```
 
-If you're stuck with a CPU-only build, run the bridge with
-`OPENSPLAT_ARGS="--cpu" npm start`.
-
-Note: build against **opencv@4** (OpenCV 5 renamed the calib3d module
-OpenSplat links against).
-
 Any other service implementing the same contract works too — point the app at
-a remote GPU box running Brush, OpenSplat or a Nerfstudio wrapper.
+a remote GPU box that accepts the jobs API. A remote service can also return
+`viewerUrl` if it has a browser preview.

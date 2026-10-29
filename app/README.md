@@ -145,9 +145,11 @@ uses a *demo simulation* that arranges your photos as flat gaussian panels
 (`demo-preview.ply`) — it does **not** train a real 3D model; in-browser
 gaussian training doesn't exist here. The Training banner says which engine is
 connected and lets you connect/test/disconnect a service. To train real
-models, run the local bridge in `tools/reconstruction-server` (COLMAP +
-OpenSplat; see its README) and connect `http://localhost:8787` — or any remote
-GPU service implementing the same jobs REST contract.
+models, run the local bridge in `tools/reconstruction-server` (Spirula
+Studio; see its README) and connect `http://localhost:8787` — or any remote
+GPU service implementing the same jobs REST contract. While a real job
+trains, the Reconstruct step embeds Spirula's web viewer. The finished
+splat still opens in this editor.
 
 ## Projects
 

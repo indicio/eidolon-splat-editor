@@ -274,6 +274,26 @@ class ModelOffsetOp implements EditOp {
     }
 }
 
+const span95 = (values: ArrayLike<number>) => {
+    const step = Math.max(1, Math.floor(values.length / 20000));
+    const sample: number[] = [];
+    for (let i = 0; i < values.length; i += step) sample.push(values[i]);
+    sample.sort((a, b) => a - b);
+    const lo = sample[Math.floor(0.05 * (sample.length - 1))];
+    const hi = sample[Math.floor(0.95 * (sample.length - 1))];
+    return hi - lo;
+};
+
+/** A ground site stored east-north-up: wide in X and Y, thin along Z. */
+const zUpGround = (data: { getProp: (name: string) => ArrayLike<number> | null }) => {
+    const x = data.getProp('x');
+    const y = data.getProp('y');
+    const z = data.getProp('z');
+    if (!x || !y || !z || x.length < 32) return false;
+    const horizontal = Math.min(span95(x), span95(y));
+    return horizontal > 0.5 && span95(z) < horizontal * 0.4;
+};
+
 class SceneManager {
     app: AppBase | null = null;
     cameraEntity!: Entity;
@@ -533,7 +553,16 @@ class SceneManager {
             // replace any existing scene content
             this.closeScene();
 
+            // Spirula's metric frame is east-north-up, so the site's height is Z.
+            // The editor and its grid are Y-up; left as-is the ground stands on
+            // edge and the reconstruction reads as a horizontal smear.
+            const standUp = file.name === 'reconstruction.ply' || zUpGround(gsplatData);
             const rotation = new Quat().copy(transform.rotation as Quat);
+            if (standUp) {
+                const tilt = new Quat().setFromEulerAngles(-90, 0, 0);
+                tilt.mul(rotation);
+                rotation.copy(tilt);
+            }
             const splat = new SplatEntity(this.app, gsplatData, file.name, file.size, rotation);
             this.app.root.addChild(splat.entity);
             this.splat = splat;
@@ -551,7 +580,8 @@ class SceneManager {
             this.history.clear();
             setState({ screen: 'editor', canUndo: false, canRedo: false, modifiers: [], viewMode: 'beauty' });
             this.publishStats();
-            this.frameScene();
+            if (standUp) this.frameAboveGround();
+            else this.frameScene();
             this.initShotFromOrbit();
             this.pushLights();
             this.applyGroundPlane();
@@ -725,6 +755,51 @@ class SceneManager {
         } else {
             this.orbit.reset();
         }
+    }
+
+    /**
+     * Frame a ground reconstruction from above, ignoring the stray gaussians
+     * that otherwise pull the camera back until the site is a speck.
+     */
+    private frameAboveGround() {
+        const splat = this.splat;
+        if (!splat) return;
+        const { x, y, z } = splat.getPositions();
+        const n = x.length;
+        if (n === 0) {
+            this.frameScene();
+            return;
+        }
+        const step = Math.max(1, Math.floor(n / 40000));
+        const rot = splat.entity.getLocalRotation();
+        const origin = splat.entity.getLocalPosition();
+        const v = new Vec3();
+        const xs: number[] = [];
+        const ys: number[] = [];
+        const zs: number[] = [];
+        for (let i = 0; i < n; i += step) {
+            v.set(x[i], y[i], z[i]);
+            rot.transformVector(v, v);
+            xs.push(v.x + origin.x);
+            ys.push(v.y + origin.y);
+            zs.push(v.z + origin.z);
+        }
+        const band = (values: number[]) => {
+            values.sort((a, b) => a - b);
+            const lo = values[Math.floor(0.02 * (values.length - 1))];
+            const hi = values[Math.floor(0.98 * (values.length - 1))];
+            return { mid: (lo + hi) * 0.5, span: hi - lo };
+        };
+        const bx = band(xs);
+        const by = band(ys);
+        const bz = band(zs);
+        this.orbit.focus(
+            new Vec3(bx.mid, by.mid, bz.mid),
+            Math.max(0.5 * Math.hypot(bx.span, by.span, bz.span), 0.1),
+            this.fov
+        );
+        this.orbit.elev = 32;
+        this.orbit.azim = -35;
     }
 
     frameSelection() {

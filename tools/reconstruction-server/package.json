@@ -6,7 +6,8 @@
   "bin": { "splat-recon": "./server.mjs" },
   "scripts": {
     "start": "node server.mjs",
-    "start:fake": "SPLAT_RECON_FAKE=1 node server.mjs"
+    "start:fake": "SPLAT_RECON_FAKE=1 node server.mjs",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "busboy": "^1.6.0"

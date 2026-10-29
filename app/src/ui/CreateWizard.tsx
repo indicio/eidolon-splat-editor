@@ -328,8 +328,8 @@ export const CreateWizard = () => {
                 Connect
             </button>
             <span className={styles.configHint}>
-                Any service implementing the jobs REST contract — see tools/reconstruction-server for a local
-                COLMAP + OpenSplat bridge. {pingResult && !serviceUrl ? pingResult : ''}
+                Any service implementing the jobs REST contract — see tools/reconstruction-server for the local
+                Spirula Studio bridge. {pingResult && !serviceUrl ? pingResult : ''}
             </span>
         </div>
     );
@@ -441,8 +441,21 @@ export const CreateWizard = () => {
                     ? diag.registeredImages < diag.totalImages * 0.75
                     : false;
                 return (
-                    <div className={styles.reconstruct}>
+                    <div className={`${styles.reconstruct} ${progress.viewerUrl ? styles.withPreview : ''}`}>
+                        {progress.viewerUrl && (
+                            <iframe
+                                className={styles.livePreview}
+                                src={progress.viewerUrl}
+                                title="Live training preview"
+                            />
+                        )}
+                        <div className={styles.reconstructBody}>
                         <h2>{provider.name}</h2>
+                        {progress.viewerUrl && (
+                            <p className={styles.previewNote}>
+                                Live preview from the trainer. The finished splat opens in the editor.
+                            </p>
+                        )}
                         <ul className={styles.stages}>
                             {provider.stages.map((s, i) => (
                                 <li key={s.id} className={i < progress.stageIndex || progress.done ? styles.stageDone : i === progress.stageIndex ? styles.stageActive : ''}>
@@ -497,6 +510,7 @@ export const CreateWizard = () => {
                             <button onClick={cancelReconstruction}>{progress.error ? 'Back' : 'Cancel'}</button>
                         </div>
                         {logOpen && <pre ref={logRef} className={styles.logView}>{logText || 'Waiting for log…'}</pre>}
+                        </div>
                     </div>
                 );
             })()}

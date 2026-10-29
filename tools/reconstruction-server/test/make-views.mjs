@@ -1,6 +1,6 @@
 // Generates multi-view test "photos" of a synthetic 3D scene (textured
 // ground + boxes) with real parallax, for smoke-testing the COLMAP +
-// OpenSplat pipeline without a camera. Writes BMPs to test/views/.
+// reconstruction pipeline without a camera. Writes BMPs to test/views/.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
