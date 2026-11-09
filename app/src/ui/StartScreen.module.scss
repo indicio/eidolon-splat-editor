@@ -113,6 +113,78 @@
     color: #fff;
 }
 
+.recents {
+    width: 100%;
+    margin-top: 36px;
+    text-align: left;
+
+    ul {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        max-height: 248px;
+        overflow-y: auto;
+    }
+
+    li {
+        display: flex;
+        align-items: stretch;
+        gap: 2px;
+    }
+}
+
+.recentLabel {
+    margin-bottom: 6px;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: var(--fs-sm);
+}
+
+.recentOpen {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    padding: 6px 8px;
+    border-radius: var(--radius);
+    background: transparent;
+    color: #fff;
+    text-align: left;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.12);
+    }
+}
+
+.recentName {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--fs-sm);
+}
+
+.recentMeta {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: var(--fs-xs);
+}
+
+.recentForget {
+    flex: none;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    border-radius: var(--radius);
+    color: rgba(255, 255, 255, 0.45);
+
+    &:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.12);
+    }
+}
+
 .actions {
     display: flex;
     flex-direction: column;

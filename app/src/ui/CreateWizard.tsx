@@ -83,6 +83,20 @@ export const CreateWizard = () => {
     const [urlDraft, setUrlDraft] = useState('');
     const [configOpen, setConfigOpen] = useState(false);
     const [pingResult, setPingResult] = useState<string | null>(null);
+
+    // A local bridge started after the page loaded is invisible until something
+    // stores its URL. Probe the default port once when nothing is configured.
+    useEffect(() => {
+        if (serviceUrl) return;
+        let cancel = false;
+        void pingService('http://localhost:8787').then((result) => {
+            if (cancel || !result.ok) return;
+            setServiceUrl('http://localhost:8787');
+            setServiceUrlState('http://localhost:8787');
+            setPingResult(result.detail);
+        });
+        return () => { cancel = true; };
+    }, [serviceUrl]);
     const provider: ReconstructionProvider = useMemo(
         () => (serviceUrl ? new RemoteProvider(serviceUrl) : new DemoProvider()),
         [serviceUrl]
@@ -417,7 +431,7 @@ export const CreateWizard = () => {
                                 onClick={() => toggle(f.id)}
                                 title={f.accepted ? 'Click to reject' : 'Click to include'}
                             >
-                                <img src={f.thumbUrl} alt={f.name} />
+                                <img src={f.thumbUrl} alt={f.name} width={f.width} height={f.height} />
                                 <div className={styles.frameMeta}>
                                     <span className={styles.frameName}>{f.name}</span>
                                     <span>{f.width}×{f.height} · {fmtBytes(f.size)}</span>

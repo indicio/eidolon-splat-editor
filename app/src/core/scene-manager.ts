@@ -79,10 +79,12 @@ import {
     base64ToBytes,
     bytesToBase64,
     downloadProject,
+    isProjectFilename,
     parseProject,
     rleFromStateBit,
     type ProjectFile
 } from './project';
+import { rememberFile } from './recents';
 import { SplatEntity, type ExplodeParams } from './splat-entity';
 import { getState, setState, type CameraAim, type LayerInfo, type LightInfo, type LoopMode, type SavedCamera, type StageSelection, type Tool, type TrackId, type ViewMode, type WorkspaceMode } from './store';
 
@@ -499,20 +501,24 @@ class SceneManager {
     private pendingFile: File | null = null;
 
     /** Route any opened/dropped file: .splatstudio projects vs splat data. */
-    openAny(file: File) {
-        if (file.name.toLowerCase().endsWith('.splatstudio')) {
-            void this.openProjectFile(file);
+    openAny(file: File, handle?: FileSystemFileHandle) {
+        if (isProjectFilename(file.name)) {
+            void this.openProjectFile(file).then(ok => {
+                if (ok) void rememberFile(file, handle);
+            });
         } else {
             this.openFile(file);
+            void rememberFile(file, handle);
         }
     }
 
     /** Multiple .ply files dropped together are treated as a time sequence. */
-    openDropped(files: File[]) {
+    openDropped(files: File[], handles?: (FileSystemFileHandle | undefined)[]) {
         if (files.length > 1 && files.every(f => f.name.toLowerCase().endsWith('.ply'))) {
+            files.forEach((file, i) => void rememberFile(file, handles?.[i]));
             void this.openSequence(files);
         } else {
-            this.openAny(files[0]);
+            this.openAny(files[0], handles?.[0]);
         }
     }
 
@@ -1861,11 +1867,12 @@ class SceneManager {
     }
 
     /** Open a .splatstudio file: parses it, then asks the UI to locate the source splat. */
-    async openProjectFile(file: File) {
+    async openProjectFile(file: File): Promise<boolean> {
         try {
             const project = parseProject(await file.text());
             this.pendingProject = project;
             setState({
+                screen: 'editor',
                 pendingProject: {
                     fileName: file.name,
                     sourceName: project.source.name,
@@ -1873,18 +1880,21 @@ class SceneManager {
                 },
                 error: null
             });
+            return true;
         } catch (err) {
             setState({ error: err instanceof Error ? err.message : String(err) });
+            return false;
         }
     }
 
     cancelPendingProject() {
         this.pendingProject = null;
-        setState({ pendingProject: null });
+        setState({ pendingProject: null, ...(!this.splat ? { screen: 'start' as const } : {}) });
     }
 
     /** Called by the locate dialog with the user-provided source splat file. */
-    async providePendingSource(file: File) {
+    async providePendingSource(file: File, handle?: FileSystemFileHandle) {
+        void rememberFile(file, handle);
         const project = this.pendingProject;
         if (!project) return;
         this.pendingProject = null;

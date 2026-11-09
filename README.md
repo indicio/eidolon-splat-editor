@@ -42,6 +42,19 @@ bridge.
 
 ## 1. The editor (required)
 
+Start the editor and the reconstruction bridge together. The bridge comes up
+first; Training then connects to `http://localhost:8787` when you open
+Create splat. Ctrl-C stops only the processes the script started.
+
+```bash
+./scripts/start.sh
+```
+
+EiDOlON listens on port 5174 (`EIDOLON_PORT` overrides it) so it does not
+collide with another app on 5173. The bridge uses 8787 (`PORT` overrides it).
+
+Or run the editor alone:
+
 ```bash
 cd app
 npm install
@@ -93,9 +106,10 @@ npm install
 npm start            # http://localhost:8787
 ```
 
-Then in EiDOlON: **Training tab → Connect service… →
-`http://localhost:8787`**. The *Test* button reports whether `spirula` was
-found. A job runs `spirula sfm auto` and then `spirula train` (default
+`./scripts/start.sh` does this and opens the editor. Or start the bridge
+yourself, then in EiDOlON open **Create splat**. With nothing else configured,
+Training connects to `http://localhost:8787` once that port answers. The
+*Test* button reports whether `spirula` was found. A job runs `spirula sfm auto` and then `spirula train` (default
 preset `3dgs`, 7000 steps — override with `SPIRULA_PRESET` and
 `SPIRULA_STEPS`). During training the Reconstruct step shows Spirula's
 viewer; when the run finishes that viewer stops and the splat opens here.

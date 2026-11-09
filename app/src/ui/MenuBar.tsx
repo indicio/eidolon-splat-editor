@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { PROJECT_ACCEPT } from '../core/file-access';
 import { runCommand, scene } from '../core/scene-manager';
 import { setState, useAppState } from '../core/store';
 import styles from './MenuBar.module.scss';
@@ -21,7 +22,8 @@ export const MenuBar = () => {
 
     const menus: Record<string, MenuItem[]> = {
         File: [
-            { label: 'Open…', shortcut: '⌘O', action: () => pickSplatFile(f => scene.openAny(f)) },
+            { label: 'Open project…', action: () => pickSplatFile((file, handle) => scene.openAny(file, handle), PROJECT_ACCEPT) },
+            { label: 'Open…', shortcut: '⌘O', action: () => pickSplatFile((file, handle) => scene.openAny(file, handle)) },
             {
                 label: 'Open PLY sequence…',
                 action: () => {

@@ -38,7 +38,11 @@ export const Viewport = () => {
     const lassoRef = useRef<{ x: number; y: number }[]>([]);
     const [marquee, setMarquee] = useState<Marquee | null>(null);
 
-    const { dragOver, dropProps } = useFileDrop(f => scene.openAny(f), undefined, files => scene.openDropped(files));
+    const { dragOver, dropProps } = useFileDrop(
+        (file, handle) => scene.openAny(file, handle),
+        undefined,
+        (files, handles) => scene.openDropped(files, handles)
+    );
 
     useEffect(() => {
         const host = hostRef.current!;

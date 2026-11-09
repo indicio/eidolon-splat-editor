@@ -46,7 +46,7 @@ const useShortcuts = () => {
             } else if (mod && key === 'e') {
                 if (getState().stats) runCommand('export.open');
             } else if (mod && key === 'o') {
-                pickSplatFile(f => scene.openAny(f));
+                pickSplatFile((file, handle) => scene.openAny(file, handle));
             } else if (key === 'escape') {
                 if (getState().saveOpen) {
                     runCommand('project.saveClose');
@@ -245,7 +245,7 @@ export const EditorShell = () => {
                         <div className={styles.locateButtons}>
                             <button
                                 className={styles.locatePrimary}
-                                onClick={() => pickSplatFile(f => void scene.providePendingSource(f), '.ply,.sog,.splat,.ksplat,.spz')}
+                                onClick={() => pickSplatFile((file, handle) => void scene.providePendingSource(file, handle), '.ply,.sog,.splat,.ksplat,.spz')}
                             >
                                 Choose source file
                             </button>

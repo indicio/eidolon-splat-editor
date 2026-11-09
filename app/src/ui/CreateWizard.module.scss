@@ -220,9 +220,12 @@
     overflow-y: auto;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
+    /* each row is as tall as its tallest frame */
+    grid-auto-rows: max-content;
     gap: var(--sp-3);
     padding: var(--sp-4);
     align-content: start;
+    align-items: start;
 }
 
 .frame {
@@ -232,12 +235,12 @@
     overflow: hidden;
     cursor: pointer;
     background: var(--bg-panel);
+    align-self: start;
 
     img {
         display: block;
         width: 100%;
-        aspect-ratio: 4 / 3;
-        object-fit: cover;
+        height: auto;
     }
 
     &.rejected {
