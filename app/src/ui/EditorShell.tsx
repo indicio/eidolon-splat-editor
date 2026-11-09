@@ -238,10 +238,10 @@ export const EditorShell = () => {
                     <div className={styles.locateCard}>
                         <h2>Open project</h2>
                         <p>
-                            <strong>{pendingProject.fileName}</strong> references the source splat{' '}
+                            <strong>{pendingProject.fileName}</strong> needs the source splat{' '}
                             <strong>{pendingProject.sourceName}</strong> ({fmtBytes(pendingProject.sourceSize)}).
                         </p>
-                        <p>Locate that file to restore the project.</p>
+                        <p>Choose that file. Projects saved from now on include it.</p>
                         <div className={styles.locateButtons}>
                             <button
                                 className={styles.locatePrimary}

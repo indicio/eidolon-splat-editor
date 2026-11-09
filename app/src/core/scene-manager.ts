@@ -78,12 +78,12 @@ import { buildEncoderConfig, sanitizeSize, videoEncodingSupported, type VideoSet
 import {
     base64ToBytes,
     bytesToBase64,
-    downloadProject,
     isProjectFilename,
     parseProject,
     rleFromStateBit,
     type ProjectFile
 } from './project';
+import { downloadBlob, isProjectPackage, packProject, unpackProject } from './project-bundle';
 import { rememberFile } from './recents';
 import { SplatEntity, type ExplodeParams } from './splat-entity';
 import { getState, setState, type CameraAim, type LayerInfo, type LightInfo, type LoopMode, type SavedCamera, type StageSelection, type Tool, type TrackId, type ViewMode, type WorkspaceMode } from './store';
@@ -333,6 +333,8 @@ class SceneManager {
     private pathDirty = true;
 
     private sequenceSource: SequenceSource | null = null;
+    /** splat files the current scene was opened from; saved inside the project */
+    private sourceFiles: File[] = [];
     private sequenceFrame = -1;
     private sequenceSwapping = false;
 
@@ -585,6 +587,7 @@ class SceneManager {
 
             this.history.clear();
             setState({ screen: 'editor', canUndo: false, canRedo: false, modifiers: [], viewMode: 'beauty' });
+            this.sourceFiles = [file];
             this.publishStats();
             if (standUp) this.frameAboveGround();
             else this.frameScene();
@@ -625,6 +628,7 @@ class SceneManager {
         this.lastSortAmount = 0;
         this.pathDirty = true;
         this.sequenceSource = null;
+        this.sourceFiles = [];
         this.sequenceFrame = -1;
         this.playFrame = 0;
         this.history.clear();
@@ -1790,10 +1794,30 @@ class SceneManager {
         return (this.splat?.fileName ?? 'scene').replace(/(\.compressed)?\.[^.]+$/, '');
     }
 
-    saveProject(name?: string) {
+    /** True when the open splat's bytes can be stored inside the project file. */
+    hasBundledSource(): boolean {
+        return this.sourceFiles.length > 0;
+    }
+
+    async saveProject(name?: string) {
         const { splat } = this;
         if (!splat) return;
+        const sources = this.sourceFiles;
+        setState({ saveOpen: false, busy: 'Saving project…' });
+        await new Promise(resolve => setTimeout(resolve, 0));
+        try {
+            const project = this.captureProject(splat);
+            const base = (name?.trim() || splat.fileName.replace(/\.[^.]+$/, '')).replace(/\.splatstudio$/i, '');
+            const blob = await packProject(project, sources);
+            downloadBlob(blob, base + '.splatstudio');
+        } catch (err) {
+            setState({ error: err instanceof Error ? err.message : String(err) });
+        } finally {
+            setState({ busy: null });
+        }
+    }
 
+    private captureProject(splat: SplatEntity): ProjectFile {
         const e = splat.entity;
         const pos = e.getLocalPosition();
         const rot = e.getLocalRotation();
@@ -1861,29 +1885,55 @@ class SceneManager {
             } : {})
         };
 
-        const base = (name?.trim() || splat.fileName.replace(/\.[^.]+$/, '')).replace(/\.splatstudio$/i, '');
-        downloadProject(project, base + '.splatstudio');
-        setState({ saveOpen: false });
+        return project;
     }
 
-    /** Open a .splatstudio file: parses it, then asks the UI to locate the source splat. */
+    /** Open a .splatstudio file. A package opens on its own; an older JSON file asks for its source splat. */
     async openProjectFile(file: File): Promise<boolean> {
+        if (await isProjectPackage(file)) return this.openBundledProject(file);
         try {
             const project = parseProject(await file.text());
-            this.pendingProject = project;
-            setState({
-                screen: 'editor',
-                pendingProject: {
-                    fileName: file.name,
-                    sourceName: project.source.name,
-                    sourceSize: project.source.size
-                },
-                error: null
-            });
+            this.askForSource(file.name, project);
             return true;
         } catch (err) {
             setState({ error: err instanceof Error ? err.message : String(err) });
             return false;
+        }
+    }
+
+    private askForSource(fileName: string, project: ProjectFile) {
+        this.pendingProject = project;
+        setState({
+            screen: 'editor',
+            pendingProject: {
+                fileName,
+                sourceName: project.source.name,
+                sourceSize: project.source.size
+            },
+            error: null,
+            busy: null
+        });
+    }
+
+    private async openBundledProject(file: File): Promise<boolean> {
+        setState({ busy: `Opening ${file.name}…`, error: null });
+        try {
+            const { project, sources } = await unpackProject(file);
+            if (sources.length === 0) {
+                this.askForSource(file.name, project);
+                return true;
+            }
+            const plySequence = sources.length > 1 && sources.every(source => source.name.toLowerCase().endsWith('.ply'));
+            if (plySequence) await this.openSequence(sources);
+            else await this.loadFile(sources[0]);
+            if (!this.splat) return false;
+            this.applyProject(project);
+            return true;
+        } catch (err) {
+            setState({ error: err instanceof Error ? err.message : String(err) });
+            return false;
+        } finally {
+            if (!this.pendingProject) setState({ busy: null });
         }
     }
 
@@ -2906,6 +2956,7 @@ class SceneManager {
             const { data, rotation } = await source.getFrame(0);
             this.closeScene();
             this.sequenceSource = source;
+            this.sourceFiles = source.files;
             this.sequenceFrame = 0;
             this.playFrame = 0;
 

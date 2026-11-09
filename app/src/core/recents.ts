@@ -1,7 +1,7 @@
 /**
  * Recently opened splats and .splatstudio projects.
- * A FileSystemFileHandle (Chromium) reopens the same file. A project is also
- * kept as JSON, so it can be opened again where handles are unavailable.
+ * A FileSystemFileHandle (Chromium) reopens the same file. A project small
+ * enough to keep is also stored as bytes, so a package is not read as text.
  */
 
 import { isSplatFilename } from './io';
@@ -18,9 +18,14 @@ export interface RecentItem {
     openedAt: number;
 }
 
+const RECENT_PROJECT_BYTES = 64 * 1024 * 1024;
+
 interface RecentRecord extends RecentItem {
     handle: FileSystemFileHandle | null;
+    /** older JSON projects */
     projectText: string | null;
+    /** packaged or JSON project bytes, when small enough to keep */
+    projectBytes?: ArrayBuffer | null;
 }
 
 const openDb = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
@@ -69,15 +74,15 @@ const readHandle = async (handle: FileSystemFileHandle): Promise<File> => {
 export const rememberFile = async (file: File, handle?: FileSystemFileHandle | null): Promise<void> => {
     const kind = isProjectFilename(file.name) ? 'project' : isSplatFilename(file.name) ? 'splat' : null;
     if (!kind) return;
-    let projectText: string | null = null;
-    if (kind === 'project') {
+    let projectBytes: ArrayBuffer | null = null;
+    if (kind === 'project' && file.size <= RECENT_PROJECT_BYTES) {
         try {
-            projectText = await file.text();
+            projectBytes = await file.arrayBuffer();
         } catch {
             return;
         }
     }
-    if (kind === 'splat' && !handle) return;
+    if (!handle && !projectBytes) return;
 
     const record: RecentRecord = {
         key: file.name.toLowerCase(),
@@ -85,7 +90,8 @@ export const rememberFile = async (file: File, handle?: FileSystemFileHandle | n
         kind,
         openedAt: Date.now(),
         handle: handle ?? null,
-        projectText
+        projectText: null,
+        projectBytes
     };
 
     try {
@@ -124,6 +130,12 @@ export const forgetRecent = async (key: string): Promise<void> => {
     } catch { /* already gone */ }
 };
 
+const fileFromRecord = (record: RecentRecord): File | null => {
+    if (record.projectBytes) return new File([record.projectBytes], record.name);
+    if (record.projectText) return new File([record.projectText], record.name, { type: 'application/json' });
+    return null;
+};
+
 /** Reopen a recent entry. Throws a message suitable for the launch screen. */
 export const fileFromRecent = async (key: string): Promise<{ file: File; handle?: FileSystemFileHandle }> => {
     const record = await withStore('readonly', store => request(store.get(key)) as Promise<RecentRecord | undefined>);
@@ -139,16 +151,14 @@ export const fileFromRecent = async (key: string): Promise<{ file: File; handle?
                 await forgetRecent(key);
                 throw new Error(`Couldn't find ${record.name}. It may have been moved.`);
             }
-            if (record.projectText) {
-                return { file: new File([record.projectText], record.name, { type: 'application/json' }) };
-            }
+            const cached = fileFromRecord(record);
+            if (cached) return { file: cached };
             throw new Error(`EiDOlON doesn't have permission to open ${record.name}.`);
         }
     }
 
-    if (record.projectText) {
-        return { file: new File([record.projectText], record.name, { type: 'application/json' }) };
-    }
+    const cached = fileFromRecord(record);
+    if (cached) return { file: cached };
 
     await forgetRecent(key);
     throw new Error(`Couldn't reopen ${record.name}. Open it again from disk.`);

@@ -153,11 +153,10 @@ splat still opens in this editor.
 
 ## Projects
 
-**File ▸ Save project (⌘S)** downloads a `.splatstudio` JSON that references the
-source splat file (never duplicates it) and stores model placement, layers,
-per-splat layer membership, deleted ranges and the camera pose. Opening a
-`.splatstudio` (drop or ⌘O) asks you to locate the source splat, then restores
-everything. **Select ▸ Crop to selection** deletes everything outside the
+**File ▸ Save project (⌘S)** downloads a `.splatstudio` package: the edit
+(placement, layers, camera, and the rest) plus the source splat it was opened
+from, so the file opens on its own. A project saved by an older build is JSON
+only and still asks you to locate the source splat. **Select ▸ Crop to selection** deletes everything outside the
 selection (undoable).
 
 ## Scripting

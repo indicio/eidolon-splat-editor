@@ -30,7 +30,9 @@ export const SaveDialog = () => {
                 </div>
 
                 <p className={styles.note}>
-                    References the source splat file; splat data is not duplicated.
+                    {scene.hasBundledSource()
+                        ? 'Includes the source splat, so the project opens on its own.'
+                        : 'The source splat is not available, so opening this project will ask for it.'}
                 </p>
 
                 <div className={styles.buttons}>

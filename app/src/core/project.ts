@@ -1,7 +1,8 @@
 /**
- * .splatstudio project file: JSON that references the source splat file
- * rather than duplicating it. Stores model placement, layers, per-splat
- * layer membership, deleted-splat ranges and the camera pose.
+ * .splatstudio project file. The document is JSON (placement, layers,
+ * camera, and the rest of the edit). A saved project is a zip package
+ * that also carries the source splat, so it opens without asking for
+ * that file. Older saves are the JSON alone and still ask for it.
  */
 
 import type { CameraKey, Interpolation } from './camera-track';
@@ -16,6 +17,8 @@ export const isProjectFilename = (name: string) => name.toLowerCase().endsWith(P
 export interface ProjectFile {
     version: 1;
     source: { name: string; size: number };
+    /** paths of source files stored beside this document in the package */
+    bundle?: { files: string[] };
     model: {
         offset: [number, number, number];
         rotation: [number, number, number, number];
@@ -114,14 +117,4 @@ export const parseProject = (text: string): ProjectFile => {
         throw new Error('Not a valid .splatstudio project file');
     }
     return json;
-};
-
-export const downloadProject = (project: ProjectFile, fileName: string) => {
-    const blob = new Blob([JSON.stringify(project)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    URL.revokeObjectURL(url);
 };
